@@ -1,19 +1,20 @@
-import { parse } from 'https://deno.land/std/flags/mod.ts'
-import * as path from 'https://deno.land/std/path/mod.ts'
-import { getLogger, loggerFactory, Logger } from './logger.ts'
+import { parse, path } from './deps.ts'
+import { getLogger, Logger, loggerFactory } from './logger.ts'
+import * as util from './util.ts'
+
+export { exec, ExecOptions } from './exec.ts'
+export { scriptLogger as log }
+export { getLoggerWithoutPrefix as getLogger }
 
 loggerFactory.level = 'info'
 loggerFactory.rootName = 'deno.runner'
 
 const scriptLogger = getLogger('script')
 
-export { scriptLogger as log }
-
 function getLoggerWithoutPrefix(name: string): Logger {
     return getLogger(name, /*relative*/ false)
 }
 
-export { getLoggerWithoutPrefix as getLogger }
 /**
  * Task context
  */
@@ -59,69 +60,6 @@ init()
 
 const log = getLogger('run')
 
-module util {
-    export function rightPad(s: string, size: number, padChar = ' '): string {
-        while (s.length < size) {
-            s = s + padChar
-        }
-        return s
-    }
-
-    export function extractFunctionDocs(func: Function): string | undefined {
-        if (!func) {
-            return undefined
-        }
-        const srcLines = func.toString().split(/\r?\n/)
-        const commentDelims = '\'"`'
-        for (var i = 0; i < srcLines.length && i < 4; i++) {
-            const line = srcLines[i].trim()
-            if (line.length == 0) {
-                continue
-            }
-            const startChar = line[0]
-            const isBeginComment = commentDelims.indexOf(startChar) != -1
-            if (isBeginComment) {
-                const startIdx = i
-                let endIdx = -1
-                for (var j = i; j < srcLines.length; j++) {
-                    const line = srcLines[j].trim()
-                    if (
-                        line.endsWith(`${startChar};`) ||
-                        line.endsWith(startChar)
-                    ) {
-                        //done, found end of comments
-                        endIdx = j
-
-                        let docs = srcLines
-                            .slice(startIdx, endIdx + 1)
-                            .join('\n')
-                            .trim()
-                        if (docs.endsWith(';')) {
-                            docs = docs.substr(0, docs.length - 1)
-                        }
-                        docs = docs.substr(1, docs.length - 2)
-                        return docs
-                    }
-                }
-                return undefined
-            }
-        }
-        return undefined
-    }
-
-    export function printTasks(lines: string[], tasks: NamedTasks) {
-        Object.keys(tasks)
-            .sort()
-            .forEach((key) => {
-                let docs = util.extractFunctionDocs(tasks[key]) || ''
-                let name = key
-                if (name.startsWith('task_')) {
-                    name = name.substring(5)
-                }
-                lines.push(`     ${util.rightPad(name, 25)} : ${docs}`)
-            })
-    }
-}
 // Create a builtin using the user supplied args so we can build help tasks etc
 function newBuiltinsTasks(
     namedTasks: NamedTasks,
@@ -273,88 +211,6 @@ async function runTasks(
             log.error(`Task '${taskName}' threw an error`, err)
             throw `Task '${taskName} threw an error`
         }
-    }
-}
-
-/**
- * Run a script or function, optionally setting a relative dir to run it within (temporary
- * change to the cwd)
- */
-export async function exec(
-    opts:
-        | string
-        | string[]
-        | {
-              cmd: (() => any) | string | string[]
-              dir?: string
-          }
-): Promise<void> {
-    const log = getLogger('build.exec')
-    if (typeof opts === 'string') {
-        opts = { cmd: opts }
-    } else if (Array.isArray(opts)) {
-        opts = { cmd: opts }
-    }
-    const cwdOrginal = Deno.cwd()
-    if (opts.dir) {
-        Deno.chdir(opts.dir)
-    }
-    try {
-        const cmd = opts.cmd
-        if (Array.isArray(cmd)) {
-            log.trace('exec (string[])', cmd)
-            for (let i = 0; i < cmd.length; i++) {
-                const c = cmd[i]
-                await _exec(c).catch((err) => {
-                    throw err
-                })
-            }
-        } else if (typeof cmd == 'string') {
-            log.trace('exec (string)', cmd)
-            await _exec(cmd).catch((err) => {
-                throw err
-            })
-        } else {
-            log.trace('exec (function)', cmd)
-            await cmd().catch((err: unknown) => {
-                throw err
-            })
-        }
-    } catch (err) {
-        log.error('error while executing', opts, err)
-        throw err
-    } finally {
-        if (opts.dir) {
-            Deno.chdir(cwdOrginal)
-        }
-    }
-}
-
-export type ExecOptions = Omit<Deno.RunOptions, 'stdout' | 'stderr'>
-
-const _exec = async (cmd: string | string[] | ExecOptions) => {
-    let opts: Deno.RunOptions
-    if (typeof cmd === 'string') {
-        opts = {
-            cmd: cmd.split(' '),
-        }
-    } else if (Array.isArray(cmd)) {
-        opts = {
-            cmd,
-        }
-    } else {
-        opts = cmd
-    }
-
-    opts.stdout = 'inherit'
-    opts.stderr = 'inherit'
-
-    const process = Deno.run(opts)
-    const { success } = await process.status()
-
-    if (!success) {
-        process.close()
-        throw new Error(`error while running '${cmd}'`)
     }
 }
 
