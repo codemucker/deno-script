@@ -1,4 +1,4 @@
-import { parse, path } from './deps.ts'
+import { parse, path } from './.deps.ts'
 import { getLogger, Logger, loggerFactory } from './logger.ts'
 import * as util from './util.ts'
 
