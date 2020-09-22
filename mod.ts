@@ -1,6 +1,6 @@
-import { parse, path } from './.deps.ts'
 import { getLogger, Logger, loggerFactory } from './logger.ts'
-import * as util from './util.ts'
+import { parse, path } from './_deps.ts'
+import * as util from './_util.ts'
 
 export { exec, ExecOptions } from './exec.ts'
 export { scriptLogger as log }
