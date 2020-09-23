@@ -16,6 +16,7 @@ export async function exec(
               dir?: string
               env?: { [name: string]: string }
               silent?: boolean
+              logError?: boolean
           }
 ): Promise<string> {
     if (typeof opts === 'string') {
@@ -66,8 +67,14 @@ export async function exec(
             return ''
         }
     } catch (err) {
-        log.error('error while executing', opts, err)
-        throw err
+        if (opts.logError != false) {
+            log.error('error while executing', opts, err)
+        }
+        throw Error(
+            `Error executing ${JSON.stringify(opts)}, error ${JSON.stringify(
+                err
+            )}`
+        )
     } finally {
         if (opts.dir) {
             Deno.chdir(cwdOrginal)
