@@ -88,26 +88,26 @@ const _exec = async (opts: {
     cmd: string | string[] | ExecOptions
     env?: { [name: string]: string }
 }): Promise<string> => {
-    let o: Deno.RunOptions
+    let runOpts: Deno.RunOptions
     if (typeof opts.cmd === 'string') {
-        o = {
+        runOpts = {
             cmd: opts.cmd.split(' '),
         }
     } else if (Array.isArray(opts.cmd)) {
-        o = {
+        runOpts = {
             cmd: opts.cmd,
         }
     } else {
-        o = opts.cmd
+        runOpts = opts.cmd
     }
 
-    o.env = opts.env
-    o.stdout = 'piped'
-    o.stderr = 'piped'
+    runOpts.env = opts.env
+    runOpts.stdout = 'piped'
+    runOpts.stderr = 'piped'
 
     log.trace(`cmd=${o.cmd}`)
 
-    const process: Deno.Process = Deno.run(o)
+    const process: Deno.Process = Deno.run(runOpts)
     const stdOut = process.output()
     const stdErr = process.stderrOutput()
 
