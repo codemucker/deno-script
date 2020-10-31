@@ -105,7 +105,7 @@ const _exec = async (opts: {
     runOpts.stdout = 'piped'
     runOpts.stderr = 'piped'
 
-    log.trace(`cmd=${o.cmd}`)
+    log.trace(`cmd=${runOpts.cmd}`, { cmd:runOpts.cmd })
 
     const process: Deno.Process = Deno.run(runOpts)
     const stdOut = process.output()
